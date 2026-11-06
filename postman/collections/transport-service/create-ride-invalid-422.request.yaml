@@ -1,0 +1,22 @@
+$kind: http-request
+name: Create ride - validation failure (422)
+order: 8000
+method: POST
+url: '{{base_url}}/api/rides'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {"patient_id": 1001}
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status is 422', () => pm.response.to.have.status(422));
+      pm.test('body matches Error schema', () => {
+        const b = pm.response.json();
+        pm.expect(Object.keys(b)).to.eql(['error']);
+        pm.expect(b.error).to.be.a('string').and.not.empty;
+      });

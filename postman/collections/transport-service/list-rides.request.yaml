@@ -1,0 +1,37 @@
+$kind: http-request
+name: List rides
+order: 4000
+method: GET
+url: '{{base_url}}/api/rides?limit=25&offset=0'
+queryParams:
+  - key: limit
+    value: '25'
+  - key: offset
+    value: '0'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status is 200', () => pm.response.to.have.status(200));
+      pm.test('body matches RidePage schema', () => {
+        const p = pm.response.json();
+        pm.expect(Object.keys(p).sort()).to.eql(['count', 'items']);
+        pm.expect(p.count).to.be.a('number');
+        pm.expect(p.items).to.be.an('array');
+        const required = ['id','patient_id','status','pickup_address','destination_facility','pickup_at','mobility_needs','created_at'];
+        p.items.forEach(r => {
+          required.forEach(k => pm.expect(r, k).to.have.property(k));
+          pm.expect(Object.keys(r).filter(k => !required.concat('notes').includes(k)), 'unexpected properties').to.be.empty;
+          pm.expect(['requested','assigned','completed','cancelled']).to.include(r.status);
+          pm.expect(['none','wheelchair','stretcher','assistance']).to.include(r.mobility_needs);
+          pm.expect(Date.parse(r.pickup_at)).to.not.be.NaN;
+          pm.expect(Date.parse(r.created_at)).to.not.be.NaN;
+        });
+      });
+      pm.test('pagination: at most limit items, count >= items, ordered by id ascending', () => {
+        const p = pm.response.json();
+        pm.expect(p.items.length).to.be.at.most(25);
+        pm.expect(p.count).to.be.at.least(p.items.length);
+        const ids = p.items.map(r => r.id);
+        pm.expect(ids).to.eql([...ids].sort((a, b) => a - b));
+      });

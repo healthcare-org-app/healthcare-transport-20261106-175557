@@ -1,0 +1,17 @@
+$kind: http-request
+name: Get ride - missing token (401)
+order: 7000
+method: GET
+url: '{{base_url}}/api/rides/{{ride_id}}'
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status is 401', () => pm.response.to.have.status(401));
+      pm.test('body matches Error schema', () => {
+        const b = pm.response.json();
+        pm.expect(Object.keys(b)).to.eql(['error']);
+        pm.expect(b.error).to.be.a('string').and.not.empty;
+      });
