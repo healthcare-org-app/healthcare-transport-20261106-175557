@@ -1,0 +1,44 @@
+name: API checks
+
+# Local-only gates: no Postman login, no API key, no secrets. Every step reads
+# files in the checkout; nothing is published to a Postman workspace.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  POSTMAN_CLI_VERSION: 1.85.0
+  # Floor for the AI readiness score (0-100). Current score is 75; raise it as
+  # the collection gains examples and documented errors.
+  AI_READINESS_MIN_SCORE: 70
+
+jobs:
+  api-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Postman CLI
+        run: npm install -g "postman-cli@${POSTMAN_CLI_VERSION}"
+
+      - name: Spec lint (syntax)
+        run: postman spec lint openapi.yaml --issueType syntax --no-report-events -f error
+
+      - name: Collection lint
+        run: postman collection lint postman/collections/transport-service -f warning
+
+      - name: AI readiness score
+        run: |
+          postman collection ai-readiness postman/collections/transport-service \
+            --min-score "$AI_READINESS_MIN_SCORE"

@@ -1,0 +1,15 @@
+$kind: http-request
+name: Get ride - not found (404)
+order: 6000
+method: GET
+url: '{{base_url}}/api/rides/999999'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status is 404', () => pm.response.to.have.status(404));
+      pm.test('body matches Error schema', () => {
+        const b = pm.response.json();
+        pm.expect(Object.keys(b)).to.eql(['error']);
+        pm.expect(b.error).to.be.a('string').and.not.empty;
+      });

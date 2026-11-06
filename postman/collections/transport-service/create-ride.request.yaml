@@ -1,0 +1,51 @@
+$kind: http-request
+name: Create ride
+order: 2000
+method: POST
+url: '{{base_url}}/api/rides'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "patient_id": {{patient_id}},
+      "pickup_address": "12 Beacon Street, Boston, MA 02108",
+      "destination_facility": "Riverside Dialysis Center",
+      "pickup_at": "{{pickup_at}}",
+      "mobility_needs": "wheelchair",
+      "notes": "Ring the bell twice, ground floor."
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      // pickup_at must be in the future (spec: createRide)
+      pm.collectionVariables.set('pickup_at', new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString());
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status is 201', () => pm.response.to.have.status(201));
+      pm.test('body matches Ride schema', () => {
+        const r = pm.response.json();
+        const required = ['id','patient_id','status','pickup_address','destination_facility','pickup_at','mobility_needs','created_at'];
+        required.forEach(k => pm.expect(r, k).to.have.property(k));
+        pm.expect(Object.keys(r).filter(k => !required.concat('notes').includes(k)), 'unexpected properties').to.be.empty;
+        pm.expect(r.id).to.be.a('number');
+        pm.expect(r.patient_id).to.be.a('number');
+        pm.expect(['requested','assigned','completed','cancelled']).to.include(r.status);
+        pm.expect(['none','wheelchair','stretcher','assistance']).to.include(r.mobility_needs);
+        pm.expect(r.pickup_address).to.be.a('string');
+        pm.expect(r.destination_facility).to.be.a('string');
+        pm.expect(Date.parse(r.pickup_at)).to.not.be.NaN;
+        pm.expect(Date.parse(r.created_at)).to.not.be.NaN;
+        if (r.notes !== undefined) pm.expect(r.notes === null || typeof r.notes === 'string').to.be.true;
+      });
+      pm.test('new ride is in requested status and echoes the request', () => {
+        const r = pm.response.json();
+        pm.expect(r.status).to.equal('requested');
+        pm.expect(r.patient_id).to.equal(Number(pm.collectionVariables.get('patient_id')));
+        pm.expect(r.destination_facility).to.equal('Riverside Dialysis Center');
+      });
+      if (pm.response.code === 201) pm.collectionVariables.set('ride_id', String(pm.response.json().id));

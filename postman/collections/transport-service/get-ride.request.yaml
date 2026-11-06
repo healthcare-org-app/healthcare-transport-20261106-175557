@@ -1,0 +1,28 @@
+$kind: http-request
+name: Get ride
+order: 3000
+method: GET
+url: '{{base_url}}/api/rides/{{ride_id}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status is 200', () => pm.response.to.have.status(200));
+      pm.test('body matches Ride schema', () => {
+        const r = pm.response.json();
+        const required = ['id','patient_id','status','pickup_address','destination_facility','pickup_at','mobility_needs','created_at'];
+        required.forEach(k => pm.expect(r, k).to.have.property(k));
+        pm.expect(Object.keys(r).filter(k => !required.concat('notes').includes(k)), 'unexpected properties').to.be.empty;
+        pm.expect(r.id).to.be.a('number');
+        pm.expect(r.patient_id).to.be.a('number');
+        pm.expect(['requested','assigned','completed','cancelled']).to.include(r.status);
+        pm.expect(['none','wheelchair','stretcher','assistance']).to.include(r.mobility_needs);
+        pm.expect(r.pickup_address).to.be.a('string');
+        pm.expect(r.destination_facility).to.be.a('string');
+        pm.expect(Date.parse(r.pickup_at)).to.not.be.NaN;
+        pm.expect(Date.parse(r.created_at)).to.not.be.NaN;
+        if (r.notes !== undefined) pm.expect(r.notes === null || typeof r.notes === 'string').to.be.true;
+      });
+      pm.test('returned id matches the requested ride_id', () => {
+        pm.expect(String(pm.response.json().id)).to.equal(pm.collectionVariables.get('ride_id'));
+      });

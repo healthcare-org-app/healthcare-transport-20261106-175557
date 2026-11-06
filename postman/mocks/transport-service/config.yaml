@@ -1,0 +1,14 @@
+version: 1
+id: 831dc05a-8ef2-4b87-9d0d-9310e33b7f04
+name: transport-service
+slug: transport-service
+protocol: http
+port: 4500
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true
+generatedFrom:
+  type: spec
+  mode: stateful
+  path: ../../../openapi.yaml

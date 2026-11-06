@@ -1,0 +1,22 @@
+$kind: collection
+name: transport-service
+description: |
+  Requests and contract tests for transport-service, derived from ../../../openapi.yaml.
+  Set `token` to a JWT with `transport.read` and `transport.write` scopes before running.
+variables:
+  - key: base_url
+    value: 'http://localhost:8200'
+    description: Local development host (openapi.yaml servers[1]).
+  - key: token
+    value: ''
+    description: Bearer JWT issued by auth-service. Do not commit a real value.
+  - key: patient_id
+    value: '1001'
+  - key: ride_id
+    value: '5001'
+    description: Overwritten by "Create ride" with the id of the ride it creates.
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
